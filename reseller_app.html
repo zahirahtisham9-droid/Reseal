@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="ur" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Desi Reseller App</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<style>
+:root {
+  --gold: #F4B400;
+  --gold-light: #FFD54F;
+  --gold-dark: #E65100;
+  --brown: #4E342E;
+  --brown-light: #6D4C41;
+  --cream: #FFF8F0;
+  --cream2: #FFF3E0;
+  --white: #FFFFFF;
+  --text-dark: #1A1208;
+  --text-mid: #4E342E;
+  --text-soft: #8D6E63;
+  --success: #2E7D32;
+  --danger: #C62828;
+  --warning: #E65100;
+  --info: #1565C0;
+  --dispatched: #6A1B9A;
+  --shadow: 0 4px 20px rgba(78,52,46,0.12);
+  --shadow-lg: 0 8px 40px rgba(78,52,46,0.18);
+  --radius: 16px;
+  --radius-sm: 10px;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--cream);
+  color: var(--text-dark);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.screen { display:none; min-height:100vh; flex-direction:column; }
+.screen.active { display:flex; }
+
+/* ── AUTH SCREENS ─────────────────────────── */
+#authScreen {
+  background: linear-gradient(160deg, #4E342E 0%, #6D4C41 35%, #F4B400 100%);
+  justify-content: center; align-items: center; padding: 24px;
+  position: relative; overflow:hidden;
+}
+#authScreen::before {
+  content:''; position:absolute; top:-60px; right:-60px;
+  width:200px; height:200px; border-radius:50%;
+  background:rgba(255,255,255,.05);
+}
+#authScreen::after {
+  content:''; position:absolute; bottom:-80px; left:-40px;
+  width:220px; height:220px; border-radius:50%;
+  background:rgba(255,255,255,.04);
+}
+
+.auth-card {
+  background:var(--white); border-radius:28px;
+  padding:36px 28px; width:100%; max-width:420px;
+  box-shadow:var(--shadow-lg); position:relative; z-index:1;
+  animation: slideUp .5s ease;
+}
+
+.auth-logo { text-align:center; margin-bottom:28px; }
+.auth-logo .logo-ring {
+  width:80px; height:80px; border-radius:22px;
+  background:linear-gradient(135deg,var(--gold),var(--brown));
+  display:flex; align-items:center; justify-content:center;
+  margin: 0 auto 12px; font-size:36px;
+  box-shadow: 0 6px 20px rgba(244,180,0,.4);
+}
+.auth-logo h1 { font-family:'Playfair Display',serif; font-size:22px; color:var(--brown); }
+.auth-logo p { font-size:13px; color:var(--text-soft); margin-top:4px; }
+
+.auth-tabs { display:flex; background:var(--cream); border-radius:12px; padding:4px; margin-bottom:24px; }
+.auth-tab {
+  flex:1; padding:10px; border:none; background:transparent;
+  font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600;
+  color:var(--text-soft); cursor:pointer; border-radius:9px; transition:all .2s;
+}
+.auth-tab.active { background:var(--white); color:var(--brown); box-shadow:var(--shadow); }
+
+.form-group { margin-bottom:16px; }
+.form-group label { display:block; font-size:12px; font-weight:600; color:var(--text-mid); margin-bottom:5px; text-transform:uppercase; letter-spacing:.4px; }
+.form-group input, .form-group select {
+  width:100%; padding:13px 16px;
+  border: 2px solid #E8D5C0; border-radius:var(--radius-sm);
+  font-family:'DM Sans',sans-serif; font-size:15px;
+  background:var(--cream); color:var(--text-dark); outline:none; transition:.2s;
+}
+.form-group input:focus, .form-group select:focus { border-color:var(--gold); background:var(--white); }
+
+.btn-primary {
+  width:100%; padding:15px;
+  background:linear-gradient(135deg,var(--gold),var(--gold-dark));
+  color:var(--white); border:none; border-radius:var(--radius-sm);
+  font-family:'DM Sans',sans-serif; font-size:16px; font-weight:600;
+  cursor:pointer; transition:all .2s; box-shadow:0 4px 15px rgba(244,180,0,.4);
+}
+.btn-primary:active { transform:scale(.98); }
+.btn-primary:disabled { opacity:.6; }
+
+.otp-grid { display:flex; gap:8px; justify-content:center; }
+.otp-grid input {
+  width:50px !important; text-align:center; font-size:20px; font-weight:700;
+  padding:12px 0 !important;
+}
+
+/* ── APP SHELL ───────────────────────────── */
+#appShell { background:var(--cream); }
+
+.top-bar {
+  background:linear-gradient(135deg, var(--brown) 0%, var(--brown-light) 100%);
+  padding: 16px 20px 14px;
+  display:flex; align-items:center; justify-content:space-between;
+  position:sticky; top:0; z-index:100;
+  box-shadow: 0 2px 12px rgba(78,52,46,.3);
+}
+.top-bar-left { display:flex; align-items:center; gap:12px; }
+.top-bar-avatar {
+  width:38px; height:38px; border-radius:12px;
+  background:linear-gradient(135deg,var(--gold),rgba(255,255,255,.2));
+  display:flex; align-items:center; justify-content:center;
+  color:var(--white); font-weight:700; font-size:16px;
+}
+.top-bar-title { color:var(--white); font-family:'Playfair Display',serif; font-size:17px; line-height:1.1; }
+.top-bar-sub { color:rgba(255,255,255,.7); font-size:11px; }
+.top-bar-right { display:flex; gap:8px; }
+.icon-btn {
+  width:36px; height:36px; border-radius:10px;
+  background:rgba(255,255,255,.15); border:none;
+  color:var(--white); font-size:17px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+}
+.icon-btn:active { background:rgba(255,255,255,.25); }
+
+.main-content { flex:1; overflow-y:auto; padding-bottom:84px; }
+
+.bottom-nav {
+  position:fixed; bottom:0; left:0; right:0;
+  background:var(--white); display:flex;
+  border-top:1px solid #E8D5C0;
+  box-shadow: 0 -4px 20px rgba(78,52,46,.1); z-index:100;
+}
+.nav-item {
+  flex:1; padding:10px 0 12px;
+  display:flex; flex-direction:column; align-items:center; gap:3px;
+  cursor:pointer; border:none; background:transparent;
+  font-family:'DM Sans',sans-serif; font-size:10px; color:var(--text-soft);
+  transition:color .2s; position:relative;
+}
+.nav-item.active { color:var(--gold); }
+.nav-icon { font-size:22px; }
+.nav-badge {
+  position:absolute; top:6px; right:calc(50% - 18px);
+  background:var(--danger); color:var(--white);
+  font-size:9px; font-weight:700; min-width:16px; height:16px;
+  border-radius:8px; display:flex; align-items:center; justify-content:center;
+  padding:0 4px;
+}
+
+.page { display:none; }
+.page.active { display:block; }
+
+/* ── HOME / PRODUCTS ─────────────────────── */
+.hero-banner {
+  margin:16px; border-radius:var(--radius);
+  background:linear-gradient(135deg,var(--brown),var(--gold));
+  padding:22px 20px; color:var(--white);
+  position:relative; overflow:hidden;
+}
+.hero-banner::after {
+  content:'🏪'; position:absolute; right:16px; top:50%;
+  transform:translateY(-50%); font-size:60px; opacity:.2;
+}
+.hero-title { font-family:'Playfair Display',serif; font-size:20px; line-height:1.2; margin-bottom:4px; }
+.hero-sub { font-size:13px; opacity:.85; }
+
+.section-title { font-family:'Playfair Display',serif; font-size:18px; color:var(--brown); }
+
+.search-bar {
+  margin:0 16px 4px; background:var(--white);
+  border-radius:var(--radius-sm); display:flex; align-items:center;
+  gap:10px; padding:12px 16px; box-shadow:var(--shadow);
+}
+.search-bar input {
+  border:none; background:transparent; flex:1;
+  font-family:'DM Sans',sans-serif; font-size:14px; outline:none; color:var(--text-dark);
+}
+
+.products-grid {
+  display:grid; grid-template-columns:1fr 1fr;
+  gap:12px; padding:16px;
+}
+
+.product-card {
+  background:var(--white); border-radius:var(--radius);
+  overflow:hidden; box-shadow:var(--shadow);
+  cursor:pointer; transition:transform .2s;
+  animation: fadeIn .3s ease both;
+}
+.product-card:active { transform:scale(.97); }
+
+.product-thumb {
+  height:130px; background:linear-gradient(135deg,var(--cream2),var(--gold-light));
+  display:flex; align-items:center; justify-content:center; font-size:50px;
+  position:relative;
+}
+.product-thumb img { width:100%; height:100%; object-fit:cover; }
+
+.stock-pill {
+  position:absolute; top:8px; right:8px;
+  font-size:9px; font-weight:700; padding:3px 8px; border-radius:20px;
+}
+.in-stock { background:rgba(46,125,50,.9); color:var(--white); }
+.out-stock { background:rgba(198,40,40,.9); color:var(--white); }
+
+.product-body { padding:12px; }
+.p-name { font-size:13px; font-weight:600; color:var(--text-dark); margin-bottom:6px; line-height:1.3; }
+.p-retail { font-size:11px; color:var(--text-soft); text-decoration:line-through; }
+.p-reseller { font-size:16px; font-weight:700; color:var(--brown); }
+.profit-chip {
+  background:linear-gradient(135deg,#E8F5E9,#C8E6C9); color:#2E7D32;
+  font-size:10px; font-weight:700; padding:3px 8px; border-radius:6px;
+  display:inline-block; margin-top:4px;
+}
+
+/* ── PRODUCT DETAIL ──────────────────────── */
+.detail-hero {
+  height:240px; background:linear-gradient(135deg,var(--cream2),var(--gold-light));
+  display:flex; align-items:center; justify-content:center; font-size:80px;
+  position:relative;
+}
+.detail-hero img { width:100%; height:100%; object-fit:cover; }
+.back-btn {
+  position:absolute; top:16px; left:16px;
+  width:38px; height:38px; border-radius:12px;
+  background:rgba(255,255,255,.9); border:none;
+  font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  box-shadow:var(--shadow);
+}
+
+.detail-body { padding:20px; }
+.detail-name { font-family:'Playfair Display',serif; font-size:22px; color:var(--brown); margin-bottom:4px; }
+.detail-cat { font-size:12px; color:var(--text-soft); margin-bottom:16px; }
+
+.price-row {
+  background:var(--cream2); border-radius:var(--radius-sm);
+  padding:14px 16px; margin-bottom:16px;
+  display:flex; justify-content:space-between; align-items:center;
+}
+.price-item { text-align:center; }
+.price-label { font-size:10px; color:var(--text-soft); font-weight:600; text-transform:uppercase; margin-bottom:3px; }
+.price-val { font-size:18px; font-weight:700; }
+.price-val.retail { color:var(--text-soft); }
+.price-val.reseller { color:var(--brown); }
+.price-val.profit { color:var(--success); }
+.price-divider { width:1px; height:40px; background:#E8D5C0; }
+
+.detail-desc { font-size:14px; color:var(--text-mid); line-height:1.6; margin-bottom:20px; }
+
+.qty-selector {
+  display:flex; align-items:center; gap:16px; margin-bottom:20px;
+}
+.qty-label { font-size:14px; font-weight:600; color:var(--text-mid); }
+.qty-controls { display:flex; align-items:center; gap:12px; margin-left:auto; }
+.qty-btn {
+  width:36px; height:36px; border-radius:10px;
+  background:var(--cream2); border:none; font-size:20px;
+  color:var(--brown); cursor:pointer; display:flex; align-items:center; justify-content:center;
+  font-weight:700;
+}
+.qty-val { font-size:20px; font-weight:700; color:var(--brown); min-width:32px; text-align:center; }
+
+/* ── ORDER FORM ──────────────────────────── */
+.order-form { padding:0 16px 16px; }
+.form-card { background:var(--white); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow); margin-bottom:16px; }
+.form-section-title { font-size:13px; font-weight:700; color:var(--text-soft); text-transform:uppercase; letter-spacing:.5px; margin-bottom:14px; }
+.order-summary {
+  background:linear-gradient(135deg,var(--brown),var(--brown-light));
+  color:var(--white); border-radius:var(--radius); padding:18px 20px;
+  margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;
+}
+.summary-product { font-size:14px; font-weight:600; }
+.summary-qty { font-size:12px; opacity:.8; margin-top:2px; }
+.summary-amount { font-size:22px; font-weight:700; font-family:'Playfair Display',serif; }
+.summary-profit { font-size:11px; color:var(--gold-light); margin-top:2px; text-align:right; }
+
+/* ── ORDER STATUS ────────────────────────── */
+.status-tabs {
+  display:flex; gap:6px; padding:16px 16px 8px;
+  overflow-x:auto; scrollbar-width:none;
+}
+.status-tabs::-webkit-scrollbar { display:none; }
+.status-tab {
+  padding:8px 14px; border-radius:20px; border:none;
+  font-family:'DM Sans',sans-serif; font-size:11px; font-weight:600;
+  cursor:pointer; white-space:nowrap; transition:all .2s;
+  background:var(--white); color:var(--text-soft); box-shadow:var(--shadow);
+}
+.status-tab.active { background:var(--gold); color:var(--white); }
+
+.order-card {
+  background:var(--white); border-radius:var(--radius); padding:18px;
+  margin:0 16px 12px; box-shadow:var(--shadow);
+  border-left:4px solid transparent;
+  animation: slideUp .3s ease both;
+}
+.order-card.pending { border-left-color:var(--gold); }
+.order-card.accepted { border-left-color:var(--success); }
+.order-card.rejected { border-left-color:var(--danger); }
+.order-card.dispatched { border-left-color:var(--dispatched); }
+.order-card.delivered { border-left-color:var(--info); }
+
+.order-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; }
+.order-id-text { font-size:11px; color:var(--text-soft); font-weight:600; }
+.status-badge {
+  font-size:10px; font-weight:700; padding:4px 10px; border-radius:20px;
+  text-transform:uppercase; letter-spacing:.5px;
+}
+.status-badge.pending { background:#FFF3E0; color:#E65100; }
+.status-badge.accepted { background:#E8F5E9; color:#2E7D32; }
+.status-badge.rejected { background:#FFEBEE; color:#C62828; }
+.status-badge.dispatched { background:#F3E5F5; color:#6A1B9A; }
+.status-badge.delivered { background:#E3F2FD; color:#1565C0; }
+
+.order-customer-name { font-size:15px; font-weight:600; margin-bottom:4px; }
+.order-details { font-size:12px; color:var(--text-soft); margin-bottom:10px; }
+.order-product-row {
+  background:var(--cream); border-radius:8px; padding:10px 12px;
+  display:flex; justify-content:space-between;
+}
+.order-product-name { font-size:13px; font-weight:600; }
+.order-profit { font-size:12px; color:var(--success); font-weight:600; }
+.tracking-info { font-size:12px; color:var(--dispatched); margin-top:8px; font-weight:600; }
+
+/* ── WALLET ──────────────────────────────── */
+.wallet-hero {
+  margin:16px; border-radius:20px;
+  background:linear-gradient(135deg,var(--brown),var(--gold));
+  padding:28px 24px; color:var(--white);
+  box-shadow: 0 8px 30px rgba(78,52,46,.3);
+}
+.wallet-label { font-size:12px; opacity:.75; text-transform:uppercase; letter-spacing:.5px; }
+.wallet-balance { font-family:'Playfair Display',serif; font-size:40px; font-weight:700; margin:6px 0; }
+.wallet-sub { font-size:13px; opacity:.8; }
+.wallet-stats { display:flex; gap:24px; margin-top:20px; border-top:1px solid rgba(255,255,255,.2); padding-top:16px; }
+.w-stat { flex:1; text-align:center; }
+.w-stat-val { font-size:20px; font-weight:700; font-family:'Playfair Display',serif; }
+.w-stat-label { font-size:10px; opacity:.75; margin-top:2px; }
+
+.wallet-card {
+  background:var(--white); border-radius:var(--radius);
+  margin:0 16px 12px; padding:18px; box-shadow:var(--shadow);
+}
+.wallet-card-title { font-size:14px; font-weight:600; color:var(--text-mid); margin-bottom:4px; }
+.wallet-card-sub { font-size:12px; color:var(--text-soft); }
+
+/* ── NOTIFICATIONS ───────────────────────── */
+.notif-card {
+  background:var(--white); border-radius:var(--radius);
+  margin:0 16px 10px; padding:16px; box-shadow:var(--shadow);
+  display:flex; gap:14px; align-items:flex-start;
+  border-left:4px solid var(--gold);
+}
+.notif-icon { font-size:28px; flex-shrink:0; }
+.notif-body { flex:1; }
+.notif-title { font-size:14px; font-weight:600; margin-bottom:3px; }
+.notif-msg { font-size:12px; color:var(--text-soft); line-height:1.4; }
+.notif-time { font-size:10px; color:var(--text-soft); margin-top:4px; }
+
+/* ── MODALS ──────────────────────────────── */
+.modal-overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,.5);
+  z-index:200; display:none; align-items:flex-end;
+  backdrop-filter:blur(4px);
+}
+.modal-overlay.open { display:flex; }
+.modal-sheet {
+  background:var(--white); border-radius:28px 28px 0 0;
+  padding:28px 24px 40px; width:100%; max-width:600px; margin:0 auto;
+  animation:slideUp .3s ease; max-height:92vh; overflow-y:auto;
+}
+.modal-handle { width:36px; height:4px; background:#E0D5C0; border-radius:2px; margin:0 auto 20px; }
+.modal-title { font-family:'Playfair Display',serif; font-size:20px; color:var(--brown); margin-bottom:20px; }
+
+/* ── SKELETON ────────────────────────────── */
+.skeleton {
+  background:linear-gradient(90deg,#f0e8df 25%,#e8ddd5 50%,#f0e8df 75%);
+  background-size:200% 100%; animation:shimmer 1.5s infinite; border-radius:8px;
+}
+@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+/* ── EMPTY STATE ─────────────────────────── */
+.empty-state {
+  text-align:center; padding:60px 24px;
+  display:flex; flex-direction:column; align-items:center; gap:12px;
+}
+.empty-icon { font-size:64px; opacity:.4; }
+.empty-title { font-family:'Playfair Display',serif; font-size:18px; color:var(--text-mid); }
+.empty-sub { font-size:13px; color:var(--text-soft); }
+
+/* ── TOAST ───────────────────────────────── */
+.toast {
+  position:fixed; top:20px; left:50%; transform:translateX(-50%) translateY(-80px);
+  background:var(--brown); color:var(--white); padding:12px 24px;
+  border-radius:30px; font-size:13px; font-weight:600; z-index:999;
+  transition:transform .3s ease; white-space:nowrap; box-shadow:var(--shadow-lg);
+}
+.toast.show { transform:translateX(-50%) translateY(0); }
+.toast.success { background:var(--success); }
+.toast.error { background:var(--danger); }
+
+/* ── ANIMATIONS ──────────────────────────── */
+@keyframes slideUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+/* ── DARK MODE ───────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --cream:#1A1208; --cream2:#231708; --white:#2D1F13;
+    --text-dark:#F5E6D0; --text-mid:#D4A96A; --text-soft:#8D7060;
+    --shadow:0 4px 20px rgba(0,0,0,.4);
+  }
+  .form-group input,.form-group select { border-color:#5D4037; color:#F5E6D0; }
+  .search-bar input { color:#F5E6D0; }
+}
+
+::-webkit-scrollbar { width:4px; }
+::-webkit-scrollbar-thumb { background:var(--gold-light); border-radius:2px; }
+</style>
+</head>
+<body>
+
+<!-- ═══ AUTH SCREEN ═══ -->
+<div id="authScreen" class="screen active">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="logo-ring">🌿</div>
+      <h1>Desi Reseller</h1>
+      <p>Pakistan's Premium Desi Products</p>
+    </div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchTab('login')">Login</button>
+      <button class="auth-tab" onclick="switchTab('signup')">Signup</button>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <div id="loginForm">
+      <div class="form-group">
+        <label>Phone Number</label>
+        <input type="tel" id="loginPhone" placeholder="03XX-XXXXXXX" maxlength="11">
+      </div>
+      <div id="loginPassGroup" class="form-group">
+        <label>Password</label>
+        <input type="password" id="loginPassword" placeholder="••••••••">
+      </div>
+      <button class="btn-primary" onclick="doEmailLogin()">📱 Login</button>
+      <p style="text-align:center;margin-top:12px;font-size:12px;color:var(--text-soft)">
+        Demo: phone as email@desi.pk + your password
+      </p>
+    </div>
+
+    <!-- SIGNUP FORM -->
+    <div id="signupForm" style="display:none">
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="signupName" placeholder="Muhammad Ali">
+      </div>
+      <div class="form-group">
+        <label>Phone Number</label>
+        <input type="tel" id="signupPhone" placeholder="03XX-XXXXXXX" maxlength="11">
+      </div>
+      <div class="form-group">
+        <label>City</label>
+        <select id="signupCity">
+          <option value="">Select City...</option>
+          <option>Karachi</option><option>Lahore</option><option>Islamabad</option>
+          <option>Rawalpindi</option><option>Faisalabad</option><option>Multan</option>
+          <option>Peshawar</option><option>Quetta</option><option>Sialkot</option>
+          <option>Hyderabad</option><option>Bahawalpur</option><option>Rahim Yar Khan</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="signupPassword" placeholder="Create password (min 6 chars)">
+      </div>
+      <button class="btn-primary" id="signupBtn" onclick="doSignup()">✅ Create Account</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ APP SHELL ═══ -->
+<div id="appShell" class="screen">
+
+  <div class="top-bar">
+    <div class="top-bar-left">
+      <div class="top-bar-avatar" id="avatarInitial">R</div>
+      <div>
+        <div class="top-bar-title" id="topBarName">Reseller</div>
+        <div class="top-bar-sub" id="topBarSub">Home</div>
+      </div>
+    </div>
+    <div class="top-bar-right">
+      <button class="icon-btn" onclick="showPage('notifications')" style="position:relative">
+        🔔
+        <span id="notifDot" style="position:absolute;top:6px;right:6px;width:8px;height:8px;background:#C62828;border-radius:50%;display:none"></span>
+      </button>
+      <button class="icon-btn" onclick="doLogout()">🚪</button>
+    </div>
+  </div>
+
+  <div class="main-content">
+
+    <!-- HOME PAGE -->
+    <div id="pageHome" class="page active">
+      <div class="hero-banner">
+        <div class="hero-title">🌿 Desi Products<br>بیچیں، کمائیں!</div>
+        <div class="hero-sub">Pakistan's finest desi products for resale</div>
+      </div>
+      <div class="search-bar" style="margin-top:12px">
+        <span style="font-size:18px;color:var(--text-soft)">🔍</span>
+        <input type="text" id="homeSearch" placeholder="Search products..." oninput="filterHomeProducts()">
+      </div>
+      <div style="padding:16px 16px 8px;display:flex;justify-content:space-between;align-items:center">
+        <div class="section-title">Products</div>
+        <div style="font-size:12px;color:var(--text-soft)" id="productCount"></div>
+      </div>
+      <div class="products-grid" id="homeProductGrid"></div>
+      <div id="homeEmpty" class="empty-state" style="display:none">
+        <div class="empty-icon">📦</div>
+        <div class="empty-title">No Products Found</div>
+        <div class="empty-sub">Admin will add products soon</div>
+      </div>
+    </div>
+
+    <!-- PRODUCT DETAIL PAGE -->
+    <div id="pageDetail" class="page">
+      <div class="detail-hero" id="detailHero">📦
+        <button class="back-btn" onclick="showPage('home')">←</button>
+      </div>
+      <div class="detail-body">
+        <div class="detail-name" id="detailName">Product Name</div>
+        <div class="detail-cat" id="detailCat">Category</div>
+        <div class="price-row">
+          <div class="price-item">
+            <div class="price-label">Retail</div>
+            <div class="price-val retail" id="detailRetail">Rs. 0</div>
+          </div>
+          <div class="price-divider"></div>
+          <div class="price-item">
+            <div class="price-label">Your Price</div>
+            <div class="price-val reseller" id="detailReseller">Rs. 0</div>
+          </div>
+          <div class="price-divider"></div>
+          <div class="price-item">
+            <div class="price-label">Profit</div>
+            <div class="price-val profit" id="detailProfit">Rs. 0</div>
+          </div>
+        </div>
+        <div class="detail-desc" id="detailDesc"></div>
+        <div class="qty-selector">
+          <span class="qty-label">Quantity:</span>
+          <div class="qty-controls">
+            <button class="qty-btn" onclick="changeQty(-1)">−</button>
+            <span class="qty-val" id="qtyVal">1</span>
+            <button class="qty-btn" onclick="changeQty(1)">+</button>
+          </div>
+        </div>
+        <button class="btn-primary" onclick="openOrderForm()">🛍️ Place Order</button>
+      </div>
+    </div>
+
+    <!-- ORDER FORM PAGE -->
+    <div id="pageOrderForm" class="page">
+      <div style="padding:16px 16px 8px;display:flex;align-items:center;gap:12px">
+        <button onclick="showPage('detail')" class="icon-btn" style="background:var(--white);color:var(--brown);box-shadow:var(--shadow)">←</button>
+        <div class="section-title">Place Order</div>
+      </div>
+      <div class="order-form">
+        <div class="order-summary" id="orderSummaryBox">
+          <div>
+            <div class="summary-product" id="summaryName">Product</div>
+            <div class="summary-qty" id="summaryQty">Qty: 1</div>
+          </div>
+          <div>
+            <div class="summary-amount" id="summaryAmount">Rs. 0</div>
+            <div class="summary-profit" id="summaryProfit">Profit: Rs. 0</div>
+          </div>
+        </div>
+        <div class="form-card">
+          <div class="form-section-title">👤 Customer Details</div>
+          <div class="form-group">
+            <label>Customer Name *</label>
+            <input type="text" id="custName" placeholder="Full name">
+          </div>
+          <div class="form-group">
+            <label>Customer Phone *</label>
+            <input type="tel" id="custPhone" placeholder="03XX-XXXXXXX">
+          </div>
+        </div>
+        <div class="form-card">
+          <div class="form-section-title">📍 Delivery Details</div>
+          <div class="form-group">
+            <label>Full Address *</label>
+            <input type="text" id="custAddress" placeholder="House #, Street, Area">
+          </div>
+          <div class="form-group">
+            <label>City *</label>
+            <select id="custCity">
+              <option value="">Select City...</option>
+              <option>Karachi</option><option>Lahore</option><option>Islamabad</option>
+              <option>Rawalpindi</option><option>Faisalabad</option><option>Multan</option>
+              <option>Peshawar</option><option>Quetta</option><option>Sialkot</option>
+              <option>Hyderabad</option><option>Bahawalpur</option><option>Rahim Yar Khan</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Notes (optional)</label>
+            <input type="text" id="custNotes" placeholder="Any delivery instructions">
+          </div>
+        </div>
+        <button class="btn-primary" id="placeOrderBtn" onclick="submitOrder()">📤 Submit Order</button>
+      </div>
+    </div>
+
+    <!-- ORDER STATUS PAGE -->
+    <div id="pageOrders" class="page">
+      <div style="padding:20px 16px 8px">
+        <div class="section-title">My Orders</div>
+        <div style="font-size:13px;color:var(--text-soft);margin-top:2px">Track all your orders</div>
+      </div>
+      <div class="status-tabs">
+        <button class="status-tab active" onclick="setOrderTab('all',this)">All</button>
+        <button class="status-tab" onclick="setOrderTab('pending',this)">⏳ Pending</button>
+        <button class="status-tab" onclick="setOrderTab('accepted',this)">✅ Accepted</button>
+        <button class="status-tab" onclick="setOrderTab('dispatched',this)">🚚 Dispatched</button>
+        <button class="status-tab" onclick="setOrderTab('delivered',this)">📬 Delivered</button>
+        <button class="status-tab" onclick="setOrderTab('rejected',this)">❌ Rejected</button>
+      </div>
+      <div id="myOrdersList"></div>
+      <div id="myOrdersEmpty" class="empty-state" style="display:none">
+        <div class="empty-icon">📭</div>
+        <div class="empty-title">No Orders Yet</div>
+        <div class="empty-sub">Browse products and place your first order!</div>
+      </div>
+    </div>
+
+    <!-- WALLET PAGE -->
+    <div id="pageWallet" class="page">
+      <div class="wallet-hero">
+        <div class="wallet-label">Current Balance</div>
+        <div class="wallet-balance" id="walletBalance">Rs. 0</div>
+        <div class="wallet-sub" id="walletCity">City: —</div>
+        <div class="wallet-stats">
+          <div class="w-stat">
+            <div class="w-stat-val" id="wTotalOrders">0</div>
+            <div class="w-stat-label">Total Orders</div>
+          </div>
+          <div class="w-stat">
+            <div class="w-stat-val" id="wTotalProfit">0</div>
+            <div class="w-stat-label">Total Profit</div>
+          </div>
+          <div class="w-stat">
+            <div class="w-stat-val" id="wDelivered">0</div>
+            <div class="w-stat-label">Delivered</div>
+          </div>
+        </div>
+      </div>
+      <div style="padding:0 16px">
+        <div class="section-title" style="margin-bottom:12px">Order Summary</div>
+      </div>
+      <div id="walletOrderSummary"></div>
+    </div>
+
+    <!-- NOTIFICATIONS PAGE -->
+    <div id="pageNotifications" class="page">
+      <div style="padding:20px 16px 12px;display:flex;justify-content:space-between;align-items:center">
+        <div class="section-title">Notifications</div>
+        <button onclick="markAllRead()" style="font-size:12px;color:var(--gold);border:none;background:transparent;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600">Mark all read</button>
+      </div>
+      <div id="notifList"></div>
+      <div id="notifEmpty" class="empty-state" style="display:none">
+        <div class="empty-icon">🔔</div>
+        <div class="empty-title">No Notifications</div>
+        <div class="empty-sub">Order updates will appear here</div>
+      </div>
+    </div>
+
+  </div><!-- end main-content -->
+
+  <div class="bottom-nav">
+    <button class="nav-item active" onclick="showPage('home')" id="nav-home">
+      <span class="nav-icon">🏠</span>Home
+    </button>
+    <button class="nav-item" onclick="showPage('orders')" id="nav-orders">
+      <span class="nav-icon">📋</span>Orders
+    </button>
+    <button class="nav-item" onclick="showPage('wallet')" id="nav-wallet">
+      <span class="nav-icon">💰</span>Wallet
+    </button>
+    <button class="nav-item" onclick="showPage('notifications')" id="nav-notifications">
+      <span class="nav-icon">🔔</span>Alerts
+    </button>
+  </div>
+
+</div><!-- end appShell -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══ FIREBASE CONFIG ═══
+const firebaseConfig = {
+  apiKey: "AIzaSyCF8jcgnhnbpRwTA1-mvEA48ZFu-lo0W2k",
+  authDomain: "al-tohoheed.firebaseapp.com",
+  projectId: "al-tohoheed",
+  storageBucket: "al-tohoheed.firebasestorage.app",
+  messagingSenderId: "825783979695",
+  appId: "1:825783979695:web:615c2f2a533454a43f8e5a"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+db.enablePersistence().catch(() => {});
+
+// ═══ STATE ═══
+let currentUser = null;
+let currentUserData = null;
+let allProducts = [];
+let myOrders = [];
+let myNotifications = [];
+let selectedProduct = null;
+let orderQty = 1;
+let myOrderTab = 'all';
+
+// ═══ AUTH ═══
+auth.onAuthStateChanged(async user => {
+  if (user) {
+    currentUser = user;
+    await loadUserData(user.uid);
+    showApp();
+    loadAll();
+  } else {
+    showAuth();
+  }
+});
+
+async function loadUserData(uid) {
+  try {
+    const doc = await db.collection('users').doc(uid).get();
+    if (doc.exists) {
+      currentUserData = {id: doc.id, ...doc.data()};
+      updateTopBar();
+    }
+  } catch(e) {}
+}
+
+function updateTopBar() {
+  if (!currentUserData) return;
+  const name = currentUserData.name || 'Reseller';
+  document.getElementById('topBarName').textContent = name;
+  document.getElementById('avatarInitial').textContent = name[0].toUpperCase();
+}
+
+function showAuth() {
+  document.getElementById('authScreen').classList.add('active');
+  document.getElementById('appShell').classList.remove('active');
+}
+function showApp() {
+  document.getElementById('authScreen').classList.remove('active');
+  document.getElementById('appShell').classList.add('active');
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.auth-tab')[tab === 'login' ? 0 : 1].classList.add('active');
+  document.getElementById('loginForm').style.display = tab === 'login' ? 'block' : 'none';
+  document.getElementById('signupForm').style.display = tab === 'signup' ? 'block' : 'none';
+}
+
+async function doEmailLogin() {
+  const phone = document.getElementById('loginPhone').value.trim();
+  const pw = document.getElementById('loginPassword').value;
+  if (!phone || !pw) { showToast('Phone اور Password درج کریں', 'error'); return; }
+  const email = phone + '@desi.pk';
+  try {
+    await auth.signInWithEmailAndPassword(email, pw);
+    showToast('خوش آمدید! 👋', 'success');
+  } catch(e) {
+    showToast('Login failed. Check phone & password', 'error');
+  }
+}
+
+async function doSignup() {
+  const name = document.getElementById('signupName').value.trim();
+  const phone = document.getElementById('signupPhone').value.trim();
+  const city = document.getElementById('signupCity').value;
+  const pw = document.getElementById('signupPassword').value;
+  if (!name || !phone || !city || !pw) { showToast('تمام fields بھریں', 'error'); return; }
+  if (pw.length < 6) { showToast('Password کم از کم 6 حروف', 'error'); return; }
+  const btn = document.getElementById('signupBtn');
+  btn.disabled = true; btn.textContent = '⌛ Creating...';
+  const email = phone + '@desi.pk';
+  try {
+    const cred = await auth.createUserWithEmailAndPassword(email, pw);
+    await db.collection('users').doc(cred.user.uid).set({
+      name, phone, city, email,
+      role: 'reseller', isActive: true,
+      walletBalance: 0, totalOrders: 0, totalProfit: 0,
+      fcmToken: '', createdAt: firebase.firestore.Timestamp.now()
+    });
+    showToast('Account بن گیا! ✅', 'success');
+  } catch(e) {
+    showToast(e.code === 'auth/email-already-in-use' ? 'یہ number پہلے سے registered ہے' : e.message, 'error');
+    btn.disabled = false; btn.textContent = '✅ Create Account';
+  }
+}
+
+function doLogout() {
+  if (confirm('Logout کریں؟')) auth.signOut();
+}
+
+// ═══ LOAD DATA ═══
+function loadAll() {
+  listenProducts();
+  listenMyOrders();
+  listenNotifications();
+}
+
+function listenProducts() {
+  db.collection('products').where('isActive','==',true).onSnapshot(snap => {
+    allProducts = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    renderHomeProducts();
+    document.getElementById('productCount').textContent = allProducts.length + ' products';
+  }, () => {});
+}
+
+function listenMyOrders() {
+  if (!currentUser) return;
+  db.collection('orders').where('resellerId','==',currentUser.uid)
+    .onSnapshot(snap => {
+    myOrders = snap.docs.map(d => ({id:d.id, ...d.data()}))
+      .sort((a,b) => {
+        const ta = a.createdAt?.toDate?.()?.getTime() || 0;
+        const tb = b.createdAt?.toDate?.()?.getTime() || 0;
+        return tb - ta;
+      });
+    renderMyOrders();
+    updateWallet();
+  }, (err) => { console.log('Orders err:', err); });
+}
+
+function listenNotifications() {
+  if (!currentUser) return;
+  db.collection('notifications').where('userId','==',currentUser.uid)
+    .limit(30).onSnapshot(snap => {
+    myNotifications = snap.docs.map(d => ({id:d.id, ...d.data()}))
+      .sort((a,b) => {
+        const ta = a.createdAt?.toDate?.()?.getTime() || 0;
+        const tb = b.createdAt?.toDate?.()?.getTime() || 0;
+        return tb - ta;
+      });
+    renderNotifications();
+    const unread = myNotifications.filter(n => !n.isRead).length;
+    document.getElementById('notifDot').style.display = unread > 0 ? 'block' : 'none';
+  }, () => {});
+}
+
+// ═══ HOME PRODUCTS ═══
+function filterHomeProducts() {
+  const q = document.getElementById('homeSearch').value.toLowerCase();
+  renderHomeProducts(q);
+}
+
+function renderHomeProducts(query = '') {
+  let products = allProducts;
+  if (query) products = products.filter(p =>
+    (p.name||'').toLowerCase().includes(query) ||
+    (p.category||'').toLowerCase().includes(query)
+  );
+  const grid = document.getElementById('homeProductGrid');
+  const empty = document.getElementById('homeEmpty');
+  if (products.length === 0) {
+    grid.innerHTML = ''; empty.style.display = 'flex';
+  } else {
+    empty.style.display = 'none';
+    grid.innerHTML = products.map((p, i) => `
+      <div class="product-card" onclick="openProduct('${p.id}')" style="animation-delay:${i*0.05}s">
+        <div class="product-thumb">
+          ${p.imageUrl ? `<img src="${p.imageUrl}" onerror="this.parentNode.innerHTML='📦<span class=\\'stock-pill ${p.stockQuantity>0?'in-stock':'out-stock'}\\'>${p.stockQuantity>0?'In Stock':'Out'}</span>'">` : '📦'}
+          <span class="stock-pill ${(p.stockQuantity||0)>0?'in-stock':'out-stock'}">${(p.stockQuantity||0)>0?'In Stock':'Out'}</span>
+        </div>
+        <div class="product-body">
+          <div class="p-name">${p.name||'Product'}</div>
+          <div class="p-retail">Rs. ${Math.round(p.retailPrice||0)}</div>
+          <div class="p-reseller">Rs. ${Math.round(p.resellerPrice||0)}</div>
+          <span class="profit-chip">+Rs. ${Math.round((p.retailPrice||0)-(p.resellerPrice||0))} Profit</span>
+        </div>
+      </div>`).join('');
+  }
+}
+
+function openProduct(id) {
+  selectedProduct = allProducts.find(p => p.id === id);
+  if (!selectedProduct) return;
+  orderQty = 1;
+  document.getElementById('qtyVal').textContent = 1;
+  const hero = document.getElementById('detailHero');
+  if (selectedProduct.imageUrl) {
+    hero.innerHTML = `<img src="${selectedProduct.imageUrl}" onerror="this.parentNode.innerHTML='📦'"><button class="back-btn" onclick="showPage('home')">←</button>`;
+  } else {
+    hero.innerHTML = `📦<button class="back-btn" onclick="showPage('home')">←</button>`;
+  }
+  document.getElementById('detailName').textContent = selectedProduct.name;
+  document.getElementById('detailCat').textContent = selectedProduct.category || '';
+  document.getElementById('detailRetail').textContent = 'Rs. ' + Math.round(selectedProduct.retailPrice||0);
+  document.getElementById('detailReseller').textContent = 'Rs. ' + Math.round(selectedProduct.resellerPrice||0);
+  document.getElementById('detailProfit').textContent = 'Rs. ' + Math.round((selectedProduct.retailPrice||0)-(selectedProduct.resellerPrice||0));
+  document.getElementById('detailDesc').textContent = selectedProduct.description || '';
+  showPage('detail');
+}
+
+function changeQty(delta) {
+  orderQty = Math.max(1, Math.min(orderQty + delta, selectedProduct?.stockQuantity || 100));
+  document.getElementById('qtyVal').textContent = orderQty;
+}
+
+function openOrderForm() {
+  if (!selectedProduct) return;
+  if ((selectedProduct.stockQuantity||0) <= 0) { showToast('یہ product out of stock ہے', 'error'); return; }
+  updateSummary();
+  showPage('orderForm');
+}
+
+function updateSummary() {
+  if (!selectedProduct) return;
+  const total = (selectedProduct.retailPrice||0) * orderQty;
+  const profit = ((selectedProduct.retailPrice||0) - (selectedProduct.resellerPrice||0)) * orderQty;
+  document.getElementById('summaryName').textContent = selectedProduct.name;
+  document.getElementById('summaryQty').textContent = `Qty: ${orderQty}`;
+  document.getElementById('summaryAmount').textContent = `Rs. ${Math.round(total)}`;
+  document.getElementById('summaryProfit').textContent = `Profit: Rs. ${Math.round(profit)}`;
+}
+
+// ═══ SUBMIT ORDER ═══
+async function submitOrder() {
+  if (!selectedProduct || !currentUser) return;
+  const custName = document.getElementById('custName').value.trim();
+  const custPhone = document.getElementById('custPhone').value.trim();
+  const address = document.getElementById('custAddress').value.trim();
+  const city = document.getElementById('custCity').value;
+  if (!custName || !custPhone || !address || !city) { showToast('تمام fields بھریں', 'error'); return; }
+
+  const btn = document.getElementById('placeOrderBtn');
+  btn.disabled = true; btn.textContent = '⌛ Placing Order...';
+
+  const totalAmount = (selectedProduct.retailPrice||0) * orderQty;
+  const profit = ((selectedProduct.retailPrice||0) - (selectedProduct.resellerPrice||0)) * orderQty;
+  const isCodRisk = (custPhone.startsWith('030') || custPhone.startsWith('031')) && orderQty > 3;
+
+  try {
+    const orderRef = await db.collection('orders').add({
+      resellerId: currentUser.uid,
+      resellerName: currentUserData?.name || 'Reseller',
+      resellerPhone: currentUserData?.phone || '',
+      resellerFcmToken: currentUserData?.fcmToken || '',
+      productId: selectedProduct.id,
+      productName: selectedProduct.name,
+      productImageUrl: selectedProduct.imageUrl || '',
+      customerName: custName,
+      customerPhone: custPhone,
+      address, city, quantity: orderQty,
+      retailPrice: selectedProduct.retailPrice||0,
+      resellerPrice: selectedProduct.resellerPrice||0,
+      totalAmount, profit,
+      status: 'pending',
+      courierCompany: '', trackingNumber: '',
+      notes: document.getElementById('custNotes').value.trim(),
+      isCodRisk,
+      createdAt: firebase.firestore.Timestamp.now(),
+      updatedAt: firebase.firestore.Timestamp.now()
+    });
+
+    // Notify admin via Firestore trigger collection
+    await db.collection('adminNotifications').add({
+      title: '🛍️ New Order!',
+      body: `${currentUserData?.name||'Reseller'} placed order for ${selectedProduct.name} · ${city}`,
+      orderId: orderRef.id,
+      type: 'new_order',
+      isRead: false,
+      createdAt: firebase.firestore.Timestamp.now()
+    });
+
+    // Update stock
+    await db.collection('products').doc(selectedProduct.id).update({
+      stockQuantity: firebase.firestore.FieldValue.increment(-orderQty)
+    });
+
+    // Update reseller stats
+    await db.collection('users').doc(currentUser.uid).update({
+      totalOrders: firebase.firestore.FieldValue.increment(1)
+    });
+
+    showToast('Order successfully placed! ✅', 'success');
+    document.getElementById('custName').value = '';
+    document.getElementById('custPhone').value = '';
+    document.getElementById('custAddress').value = '';
+    document.getElementById('custCity').value = '';
+    document.getElementById('custNotes').value = '';
+    btn.disabled = false; btn.textContent = '📤 Submit Order';
+    setTimeout(() => showPage('orders'), 1500);
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+    btn.disabled = false; btn.textContent = '📤 Submit Order';
+  }
+}
+
+// ═══ MY ORDERS ═══
+function setOrderTab(tab, el) {
+  myOrderTab = tab;
+  document.querySelectorAll('.status-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderMyOrders();
+}
+
+function renderMyOrders() {
+  let orders = myOrderTab === 'all' ? myOrders : myOrders.filter(o => o.status === myOrderTab);
+  const list = document.getElementById('myOrdersList');
+  const empty = document.getElementById('myOrdersEmpty');
+  if (orders.length === 0) {
+    list.innerHTML = ''; empty.style.display = 'flex';
+  } else {
+    empty.style.display = 'none';
+    list.innerHTML = orders.map(o => {
+      const status = o.status || 'pending';
+      const date = o.createdAt?.toDate?.() ? o.createdAt.toDate().toLocaleDateString('en-PK') : '';
+      return `<div class="order-card ${status}">
+        <div class="order-header">
+          <span class="order-id-text">#${o.id.slice(-6).toUpperCase()} · ${date}</span>
+          <span class="status-badge ${status}">${status}</span>
+        </div>
+        <div class="order-customer-name">${o.customerName||'N/A'}</div>
+        <div class="order-details">📞 ${o.customerPhone||'—'} · 📍 ${o.city||'—'}</div>
+        <div class="order-product-row">
+          <div>
+            <div class="order-product-name">${o.productName||'N/A'} × ${o.quantity||1}</div>
+            <div style="font-size:11px;color:var(--text-soft);margin-top:2px">${(o.address||'').slice(0,40)}</div>
+          </div>
+          <div class="order-profit">+Rs. ${Math.round(o.profit||0)}</div>
+        </div>
+        ${o.trackingNumber ? `<div class="tracking-info">🚚 ${o.courierCompany} · ${o.trackingNumber}</div>` : ''}
+      </div>`;
+    }).join('');
+  }
+}
+
+// ═══ WALLET ═══
+function updateWallet() {
+  if (!currentUserData) return;
+  const delivered = myOrders.filter(o => o.status === 'delivered');
+  const totalProfit = myOrders.reduce((s,o) => s + (o.profit||0), 0);
+  const balance = currentUserData.walletBalance || 0;
+
+  document.getElementById('walletBalance').textContent = 'Rs. ' + Math.round(balance).toLocaleString();
+  document.getElementById('walletCity').textContent = 'City: ' + (currentUserData.city||'—');
+  document.getElementById('wTotalOrders').textContent = myOrders.length;
+  document.getElementById('wTotalProfit').textContent = 'Rs. ' + Math.round(totalProfit).toLocaleString();
+  document.getElementById('wDelivered').textContent = delivered.length;
+
+  const statuses = ['pending','accepted','dispatched','delivered','rejected'];
+  const summary = document.getElementById('walletOrderSummary');
+  summary.innerHTML = statuses.map(s => {
+    const count = myOrders.filter(o => o.status === s).length;
+    const icons = {pending:'⏳',accepted:'✅',dispatched:'🚚',delivered:'📬',rejected:'❌'};
+    return `<div class="wallet-card" style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div class="wallet-card-title">${icons[s]} ${s.charAt(0).toUpperCase()+s.slice(1)} Orders</div>
+        <div class="wallet-card-sub">Total ${count} orders</div>
+      </div>
+      <div style="font-family:'Playfair Display',serif;font-size:24px;color:var(--brown);font-weight:700">${count}</div>
+    </div>`;
+  }).join('');
+}
+
+// ═══ NOTIFICATIONS ═══
+function renderNotifications() {
+  const list = document.getElementById('notifList');
+  const empty = document.getElementById('notifEmpty');
+  if (myNotifications.length === 0) {
+    list.innerHTML = ''; empty.style.display = 'flex';
+  } else {
+    empty.style.display = 'none';
+    list.innerHTML = myNotifications.map(n => {
+      const icons = {order_accepted:'✅',order_rejected:'❌',order_dispatched:'🚚',new_order:'📦'};
+      const time = n.createdAt?.toDate?.() ? n.createdAt.toDate().toLocaleString('en-PK') : '';
+      return `<div class="notif-card" style="${n.isRead?'opacity:.7':''}">
+        <div class="notif-icon">${icons[n.type]||'🔔'}</div>
+        <div class="notif-body">
+          <div class="notif-title">${n.title||''}</div>
+          <div class="notif-msg">${n.body||''}</div>
+          <div class="notif-time">${time}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+}
+
+async function markAllRead() {
+  const batch = db.batch();
+  myNotifications.filter(n => !n.isRead).forEach(n => {
+    batch.update(db.collection('notifications').doc(n.id), {isRead: true});
+  });
+  await batch.commit();
+  document.getElementById('notifDot').style.display = 'none';
+}
+
+// ═══ NAVIGATION ═══
+function showPage(page) {
+  const pageMap = {
+    home:'pageHome', detail:'pageDetail', orderForm:'pageOrderForm',
+    orders:'pageOrders', wallet:'pageWallet', notifications:'pageNotifications'
+  };
+  const subMap = {
+    home:'Browse Products', detail:'Product Details', orderForm:'Place Order',
+    orders:'My Orders', wallet:'My Wallet', notifications:'Notifications'
+  };
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById(pageMap[page])?.classList.add('active');
+  document.getElementById('nav-' + (page==='home'?'home':page==='orders'?'orders':page==='wallet'?'wallet':page==='notifications'?'notifications':''))?.classList.add('active');
+  document.getElementById('topBarSub').textContent = subMap[page] || '';
+
+  if (page === 'wallet') { loadUserData(currentUser?.uid); updateWallet(); }
+  if (page === 'orders') renderMyOrders();
+}
+
+// ═══ HELPERS ═══
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type ? ' ' + type : '');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>
